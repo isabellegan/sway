@@ -4,11 +4,11 @@ import type { ChatMessage, Sender } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const SENDER_META: Record<Sender, { label: string; role: string; labelColor: string }> = {
-  alice:       { label: 'Alice',       role: 'PM',         labelColor: 'text-violet-400' },
-  bob:         { label: 'Bob',         role: 'Staff Eng',  labelColor: 'text-blue-400'   },
-  charlie:     { label: 'Charlie',     role: 'CTO',        labelColor: 'text-indigo-300' },
-  system:      { label: 'System',      role: '',           labelColor: 'text-amber-400'  },
-  redis_agent: { label: 'Redis Agent', role: 'AI',         labelColor: 'text-red-400'    },
+  alice:       { label: 'Alice',                   role: 'PM',         labelColor: 'text-violet-400' },
+  bob:         { label: 'Bob',                     role: 'Staff Eng',  labelColor: 'text-blue-400'   },
+  charlie:     { label: 'Charlie',                 role: 'CTO',        labelColor: 'text-indigo-300' },
+  system:      { label: 'System',                  role: '',           labelColor: 'text-amber-400'  },
+  redis_agent: { label: 'Distributed Lock Engine', role: 'AI Agent',   labelColor: 'text-red-400'    },
 };
 
 interface MessageBubbleProps {
@@ -30,17 +30,19 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     );
   }
 
-  // ─── Agent alert (Redis escalation, left-aligned, red border) ─────────────
+  // ─── Agent alert (Distributed Lock Engine escalation) ──────────────────────
   if (type === 'agent_alert') {
     return (
-      <div className="flex flex-col gap-1 px-4 my-3 mr-8">
+      <div className="flex flex-col gap-1.5 px-4 my-3 mr-6">
         <div className="flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-          <span className={cn('text-xs font-mono font-semibold', meta.labelColor)}>
+          {/* Static dot — no animate-pulse */}
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+          <span className={cn('text-[13px] font-mono font-semibold', meta.labelColor)}>
             ⚠ {meta.label}
           </span>
         </div>
-        <div className="bg-red-950/40 border border-red-500/40 rounded-xl rounded-tl-sm px-4 py-3 animate-red-pulse">
+        {/* Static glow — authoritative, not flashing */}
+        <div className="bg-red-950/40 border border-red-500/40 rounded-xl rounded-tl-sm px-4 py-3 glow-red">
           <p className="text-red-200 text-xs font-mono leading-relaxed">{text}</p>
         </div>
       </div>
@@ -50,8 +52,9 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   // ─── Charlie / CTO (right-aligned) ────────────────────────────────────────
   if (sender === 'charlie') {
     return (
-      <div className="flex flex-col items-end gap-1 px-4 my-2 ml-12">
-        <span className={cn('text-[10px] font-mono', meta.labelColor)}>
+      <div className="flex flex-col items-end gap-1.5 px-4 my-2 ml-12">
+        {/* Role same color as name */}
+        <span className={cn('text-[13px] font-mono', meta.labelColor)}>
           {meta.label} · {meta.role}
         </span>
         <div className="bg-indigo-950/70 border border-indigo-500/25 rounded-xl rounded-tr-sm px-4 py-3 max-w-xs">
@@ -61,26 +64,20 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     );
   }
 
-  // ─── Alice / Bob (left-aligned, slightly different shades) ─────────────────
+  // ─── Alice / Bob (left-aligned) ────────────────────────────────────────────
   const bubbleBg =
     sender === 'alice'
       ? 'bg-zinc-800/60 border-white/10'
       : 'bg-zinc-900/70 border-white/8';
 
   return (
-    <div className="flex flex-col gap-1 px-4 my-2 mr-12">
-      <span className={cn('text-[10px] font-mono', meta.labelColor)}>
+    <div className="flex flex-col gap-1.5 px-4 my-2 mr-12">
+      {/* Name · Role in one unified color (no muted gray for the role) */}
+      <span className={cn('text-[13px] font-mono', meta.labelColor)}>
         {meta.label}
-        {meta.role && (
-          <span className="text-zinc-600"> · {meta.role}</span>
-        )}
+        {meta.role && ` · ${meta.role}`}
       </span>
-      <div
-        className={cn(
-          'border rounded-xl rounded-tl-sm px-4 py-3 max-w-xs',
-          bubbleBg
-        )}
-      >
+      <div className={cn('border rounded-xl rounded-tl-sm px-4 py-3 max-w-xs', bubbleBg)}>
         <p className="text-zinc-200 text-sm leading-relaxed">{text}</p>
       </div>
     </div>

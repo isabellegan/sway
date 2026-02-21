@@ -1,8 +1,8 @@
 import type { Sender } from './types';
 
 // ─── Timing ───────────────────────────────────────────────────────────────────
-export const TYPING_MS = 1400;   // Duration of "typing…" indicator before message appears
-export const INTER_MSG_MS = 700; // Pause between messages in a sequence
+export const TYPING_MS = 2200;   // Duration of "typing…" indicator before message appears
+export const INTER_MSG_MS = 1200; // Pause between messages in a sequence
 
 // ─── Header ───────────────────────────────────────────────────────────────────
 export const DEPLOY_HASH = 'a3f9c2e';
@@ -40,11 +40,11 @@ export const PHASE3_BOB_RESPONSE =
 
 // ─── Phase 3 — Factory Floor node initial details ────────────────────────────
 export const NODE_DETAILS = {
-  api_working:   'Intercepting checkout flows...',
-  redis_working: 'Provisioning SETNX locks...',
+  api_working:   'Intercepting checkout streams...',
+  redis_working: 'Initializing SETNX lock cluster...',
   redis_error:   'LOCK LEAK — P99 latency: 650ms',
   redis_success: 'Watchdog heartbeat active.',
-  queue_working: 'Provisioning DLQ...',
+  queue_working: 'Provisioning dead-letter queue...',
 } as const;
 
 // ─── Phase 4 — Resolution ────────────────────────────────────────────────────

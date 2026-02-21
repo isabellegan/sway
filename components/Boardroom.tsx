@@ -13,23 +13,27 @@ import { MessageBubble } from './MessageBubble';
 import { cn } from '@/lib/utils';
 import type { ChatMessage, Phase, Sender } from '@/lib/types';
 
-// ─── Sender display names (for typing indicator) ──────────────────────────────
 const SENDER_LABEL: Record<Sender, string> = {
   alice:       'Alice',
   bob:         'Bob',
   charlie:     'Charlie',
   system:      'System',
-  redis_agent: 'Redis Agent',
+  redis_agent: 'Distributed Lock Engine',
 };
 
-// ─── Placeholder copy per phase ───────────────────────────────────────────────
 const PLACEHOLDER: Partial<Record<Phase, string>> = {
-  waiting_input1:   'Ask the team a question...',
-  waiting_approval: 'Issue your directive...',
+  waiting_input1:     'Ask the team a question...',
+  waiting_approval:   'Issue your directive...',
   waiting_resolution: 'Choose your resolution...',
 };
 
-// ─── Props ────────────────────────────────────────────────────────────────────
+// ─── Avatar data ──────────────────────────────────────────────────────────────
+const AVATARS = [
+  { id: 'alice',   initial: 'A', ring: 'ring-violet-500/40' },
+  { id: 'bob',     initial: 'B', ring: 'ring-blue-500/40'   },
+  { id: 'charlie', initial: 'C', ring: 'ring-indigo-500/40' },
+];
+
 interface BoardroomProps {
   messages: ChatMessage[];
   isTyping: boolean;
@@ -39,7 +43,6 @@ interface BoardroomProps {
   phase: Phase;
 }
 
-// ─── Typing indicator ─────────────────────────────────────────────────────────
 function TypingIndicator({ sender }: { sender: Sender }) {
   return (
     <div className="flex items-center gap-2 px-4 py-2">
@@ -60,7 +63,6 @@ function TypingIndicator({ sender }: { sender: Sender }) {
   );
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
 export function Boardroom({
   messages,
   isTyping,
@@ -73,28 +75,20 @@ export function Boardroom({
   const bottomRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
 
-  // Sound hooks — gracefully no-ops if files are absent
   const [playPop]   = useSound('/sounds/pop.mp3',   { volume: 0.25 });
   const [playError] = useSound('/sounds/error.mp3', { volume: 0.45 });
 
-  // Auto-scroll to bottom on new messages / typing indicator changes
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  // Sound on new message
   useEffect(() => {
     if (messages.length > prevCountRef.current) {
       const latest = messages[messages.length - 1];
       try {
-        if (latest?.type === 'agent_alert') {
-          playError();
-        } else {
-          playPop();
-        }
-      } catch {
-        // Howler silently fails if audio files are absent
-      }
+        if (latest?.type === 'agent_alert') playError();
+        else playPop();
+      } catch { /* audio files absent */ }
       prevCountRef.current = messages.length;
     }
   }, [messages, playPop, playError]);
@@ -102,29 +96,37 @@ export function Boardroom({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = inputValue.trim();
-    if (!text || inputLocked) return;
+    if (!text) return;
+    // Hook's handleUserMessage internally ignores messages when gate is closed
     setInputValue('');
     await handleUserMessage(text);
   };
 
-  const placeholder = inputLocked
-    ? '...'
-    : (PLACEHOLDER[phase] ?? 'Type a message...');
+  const placeholder = PLACEHOLDER[phase] ?? 'Type a message...';
 
   return (
     <section className="flex flex-col h-full border-r border-white/10 overflow-hidden">
-      {/* ── Panel label ──────────────────────────────────────────────────────── */}
+
+      {/* ── Panel label + avatars ─────────────────────────────────────────────── */}
       <div className="flex-shrink-0 flex items-center justify-between px-5 py-3 border-b border-white/10">
         <span className="text-[10px] font-mono tracking-widest text-zinc-600 uppercase">
           Boardroom
         </span>
-        <div className="flex items-center gap-1.5">
-          {['alice', 'bob', 'charlie'].map(name => (
+
+        {/* Premium avatar row */}
+        <div className="flex items-center gap-2">
+          {AVATARS.map(({ id, initial, ring }) => (
             <div
-              key={name}
-              className="w-5 h-5 rounded-full bg-zinc-800 border border-white/10 text-[8px] font-mono text-zinc-500 flex items-center justify-center uppercase"
+              key={id}
+              className={cn(
+                'w-7 h-7 rounded-full flex items-center justify-center',
+                'bg-gradient-to-br from-zinc-700 to-zinc-900',
+                'ring-1 shadow-lg',
+                ring,
+                'text-[10px] font-semibold text-zinc-300 uppercase select-none'
+              )}
             >
-              {name[0]}
+              {initial}
             </div>
           ))}
         </div>
@@ -145,7 +147,6 @@ export function Boardroom({
           ))}
         </AnimatePresence>
 
-        {/* Typing indicator */}
         <AnimatePresence>
           {isTyping && typingAs && (
             <motion.div
@@ -160,36 +161,32 @@ export function Boardroom({
           )}
         </AnimatePresence>
 
-        {/* Scroll anchor */}
         <div ref={bottomRef} />
       </div>
 
       {/* ── Input area ───────────────────────────────────────────────────────── */}
       <div className="flex-shrink-0 p-4 border-t border-white/10">
         <form onSubmit={handleSubmit} className="relative">
+          {/* Input is ALWAYS enabled — the hook gates processing internally */}
           <input
             type="text"
             value={inputValue}
             onChange={e => setInputValue(e.target.value)}
-            disabled={inputLocked}
             placeholder={placeholder}
             className={cn(
               'w-full bg-zinc-900/60 border border-white/10 rounded-xl px-4 py-3 pr-12',
               'text-sm text-zinc-100 placeholder:text-zinc-600',
               'focus:outline-none focus:ring-1 focus:ring-indigo-500/40 focus:border-indigo-500/30',
-              'transition-all duration-200',
-              inputLocked
-                ? 'opacity-40 cursor-not-allowed'
-                : 'opacity-100 hover:border-white/20'
+              'transition-all duration-200 hover:border-white/20'
             )}
           />
           <button
             type="submit"
-            disabled={inputLocked || !inputValue.trim()}
+            disabled={!inputValue.trim()}
             className={cn(
               'absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg',
               'flex items-center justify-center transition-all duration-150',
-              inputLocked || !inputValue.trim()
+              !inputValue.trim()
                 ? 'text-zinc-700 cursor-not-allowed'
                 : 'text-indigo-400 hover:bg-indigo-500/15 hover:text-indigo-300'
             )}
@@ -201,16 +198,10 @@ export function Boardroom({
           </button>
         </form>
 
-        {/* Phase hint */}
-        {!inputLocked && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mt-2 text-[10px] font-mono text-zinc-700 px-1"
-          >
-            {'>'} You are Charlie · CTO
-          </motion.p>
-        )}
+        {/* Persistent role hint */}
+        <p className="mt-2 text-[10px] font-mono text-zinc-700 px-1">
+          {'>'} You are Charlie · CTO
+        </p>
       </div>
     </section>
   );

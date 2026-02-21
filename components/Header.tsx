@@ -44,7 +44,7 @@ export function Header({ systemStatus, deployHash }: HeaderProps) {
               </span>
               {deployHash && (
                 <span className="text-xs font-mono text-zinc-600">
-                  #{deployHash}
+                  commit: {deployHash}
                 </span>
               )}
             </motion.div>

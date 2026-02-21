@@ -15,11 +15,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AgentNode, type AgentNodeType } from './nodes/AgentNode';
 import type { FactoryNode, Phase } from '@/lib/types';
 
-// ─── Node positions (fixed layout: API at top, Redis/Queue below) ─────────────
+// ─── Node positions — vertical pipeline layout for w-96/h-80 nodes ───────────
+// api → redis → queue reads top-to-bottom as an execution pipeline
 const NODE_POSITIONS: Record<string, { x: number; y: number }> = {
-  'api-agent':   { x: 170, y: 30  },
-  'redis-agent': { x: 30,  y: 230 },
-  'queue-agent': { x: 320, y: 230 },
+  'api-agent':   { x: 60, y: 20  },
+  'redis-agent': { x: 60, y: 400 },
+  'queue-agent': { x: 60, y: 780 },
 };
 
 // ─── Register custom node type OUTSIDE the component to prevent re-creation ───
@@ -39,7 +40,7 @@ function AutoFitView({ nodeCount }: { nodeCount: number }) {
 
   useEffect(() => {
     if (nodeCount > 0) {
-      const t = setTimeout(() => fitView({ padding: 0.28, duration: 450 }), 80);
+      const t = setTimeout(() => fitView({ padding: 0.12, duration: 500 }), 80);
       return () => clearTimeout(t);
     }
   }, [nodeCount, fitView]);
@@ -80,6 +81,7 @@ export function FactoryFloor({ nodes, phase }: FactoryFloorProps) {
       ? { type: MarkerType.ArrowClosed, color: 'rgba(99, 102, 241, 0.5)', width: 14, height: 14 }
       : undefined;
 
+    // Pipeline topology: Gateway → Lock Engine → DLQ
     return [
       {
         id: 'e-api-redis',
@@ -90,8 +92,8 @@ export function FactoryFloor({ nodes, phase }: FactoryFloorProps) {
         markerEnd: marker,
       },
       {
-        id: 'e-api-queue',
-        source: 'api-agent',
+        id: 'e-redis-queue',
+        source: 'redis-agent',
         target: 'queue-agent',
         animated: isActive,
         style: edgeStyle,

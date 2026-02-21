@@ -133,9 +133,9 @@ export function useOrchestration(): OrchestrationReturn {
 
       // Spin up 3 nodes in working state immediately
       setNodes([
-        { id: 'api-agent',   label: 'Gateway Orchestrator',    status: 'working', detail: NODE_DETAILS.api_working },
-        { id: 'redis-agent', label: 'Distributed Lock Engine', status: 'working', detail: NODE_DETAILS.redis_working },
-        { id: 'queue-agent', label: 'DLQ Provisioner',         status: 'working', detail: NODE_DETAILS.queue_working },
+        { id: 'api-agent',   label: 'Gateway Orchestrator Agent', status: 'working', detail: NODE_DETAILS.api_working },
+        { id: 'redis-agent', label: 'Distributed Lock Agent',    status: 'working', detail: NODE_DETAILS.redis_working },
+        { id: 'queue-agent', label: 'DLQ Agent',                 status: 'working', detail: NODE_DETAILS.queue_working },
       ]);
 
       // T+2000ms: Redis agent detects the lock leak → flip to error (stark red)

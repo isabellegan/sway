@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -9,54 +10,73 @@ import type { NodeStatus } from '@/lib/types';
 type AgentNodeData = { label: string; status: NodeStatus; detail?: string };
 export type AgentNodeType = Node<AgentNodeData, 'agentNode'>;
 
-// ─── Per-node static terminal log lines ──────────────────────────────────────
-const STATIC_LOGS: Record<string, string[]> = {
-  'api-agent': [
-    '$ init --mode=gateway --replicas=6',
-    '$ probe --targets=checkout-svc:8080',
-    '───────────────────────────',
-    '[12:04:01] pod/web-6d4f → 200 OK  14ms',
-    '[12:04:01] pod/web-7c2a → 200 OK  11ms',
-    '[12:04:02] pod/web-9f1b → 200 OK  16ms',
-    '[12:04:02] pod/web-3e8c → 200 OK  12ms',
-    '[12:04:03] pod/web-1a8d → 200 OK  13ms',
-    '[12:04:03] pod/web-5f2e → 200 OK  10ms',
-    '───────────────────────────',
-    '[12:04:04] routing table: 6 pods healthy',
-    '[12:04:04] p50: 12ms  p99: 48ms',
-    '$ watch --event=checkout --stream',
-  ],
-  'redis-agent': [
-    '$ init --mode=setnx --cluster=redis-ha',
-    '$ connect --nodes=3 --quorum=2',
-    '───────────────────────────',
-    '[12:04:01] node/redis-0: LEADER   ok',
-    '[12:04:01] node/redis-1: FOLLOWER ok',
-    '[12:04:01] node/redis-2: FOLLOWER ok',
-    '[12:04:02] lock:sku-4821 → acquired',
-    '[12:04:02]   owner=pod/web-7c2a ttl=500ms',
-    '[12:04:03] lock:sku-4821 → released',
-    '───────────────────────────',
-    '[12:04:03] throughput: 843 locks/s',
-    '[12:04:04] p99 write latency: 41ms',
-    '$ monitor --locks --ttl-drift',
-  ],
-  'queue-agent': [
-    '$ init --mode=dlq --broker=sqs-prod',
-    '$ configure --timeout=30s --retention=72h',
-    '───────────────────────────',
-    '[12:04:01] queue/checkout-dlq: READY',
-    '[12:04:01]   visibility-timeout: 30s',
-    '[12:04:01]   max-retries: 3',
-    '[12:04:02] consumer/dlq-1: IDLE',
-    '[12:04:02] consumer/dlq-2: IDLE',
-    '[12:04:03] backoff: exponential 2x',
-    '───────────────────────────',
-    '[12:04:03] messages in flight: 0',
-    '[12:04:04] dlq depth: 0 msgs',
-    '$ subscribe --topic=checkout-failures',
-  ],
-};
+// ─── Dynamic terminal log generator ──────────────────────────────────────────
+// Timestamps are computed once at mount from the real system clock.
+function buildLogs(id: string): string[] {
+  const now = new Date();
+  const ts = (secondsAgo: number) =>
+    new Date(now.getTime() - secondsAgo * 1000).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
+
+  const map: Record<string, string[]> = {
+    // ── Gateway Orchestrator Agent — Next.js HTTP request logs ─────────────
+    'api-agent': [
+      '$ next start --port=3000 --hostname=0.0.0.0',
+      '✓ ready on http://0.0.0.0:3000',
+      '─────────────────────────────────────',
+      `${ts(14)} POST /api/checkout  200  23ms`,
+      `${ts(12)} POST /api/checkout  200  18ms`,
+      `${ts(10)} POST /api/checkout  200  31ms`,
+      `${ts(8)}  POST /api/checkout  200  22ms`,
+      `${ts(6)}  POST /api/checkout  200  19ms`,
+      `${ts(4)}  POST /api/checkout  409  12ms  ← race!`,
+      `${ts(3)}  POST /api/checkout  200  26ms`,
+      `${ts(2)}  POST /api/checkout  200  24ms`,
+      `${ts(1)}  POST /api/checkout  200  21ms`,
+      '─────────────────────────────────────',
+    ],
+
+    // ── Distributed Lock Agent — raw Lua / Redis script ────────────────────
+    'redis-agent': [
+      '-- KEYS[1]=lock:sku  ARGV[1]=pod  ARGV[2]=ttl',
+      'local ex = redis.call("GET", KEYS[1])',
+      'if ex == false then',
+      '  redis.call("SET", KEYS[1], ARGV[1],',
+      '    "PX", ARGV[2])',
+      '  return 1',
+      'else return 0 end',
+      '─────────────────────────────────────',
+      `${ts(9)}  > EVAL lock.lua 1 sku:4821 pod-9f2a 500`,
+      `${ts(9)}  (integer) 1`,
+      `${ts(5)}  > GET sku:4821`,
+      `${ts(5)}  "pod-9f2a"`,
+      '─────────────────────────────────────',
+    ],
+
+    // ── DLQ Agent — AWS CLI JSON output ───────────────────────────────────
+    'queue-agent': [
+      '$ aws sqs create-queue \\',
+      '    --queue-name checkout-dlq.fifo \\',
+      '    --region us-east-1',
+      '{',
+      '  "QueueUrl": "https://sqs.us-east-1...",',
+      '  "Arn": "arn:aws:sqs:us-east-1:...",',
+      '  "VisibilityTimeout": "30",',
+      '  "MessageRetentionPeriod": "259200"',
+      '}',
+      '─────────────────────────────────────',
+      `${ts(6)}  $ aws sqs get-queue-attributes`,
+      `${ts(4)}  "ApproximateNumberOfMessages": "0"`,
+      '─────────────────────────────────────',
+    ],
+  };
+
+  return map[id] ?? [];
+}
 
 // ─── Status → visual mappings ─────────────────────────────────────────────────
 const STATUS_DOT: Record<NodeStatus, string> = {
@@ -90,12 +110,15 @@ const BORDER: Record<NodeStatus, string> = {
 // ─── Component ────────────────────────────────────────────────────────────────
 export function AgentNode({ id, data }: NodeProps<AgentNodeType>) {
   const { label, status, detail } = data;
-  const staticLogs = STATIC_LOGS[id] ?? [];
+
+  // Compute once at mount — real timestamps, never stale
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const logs = useMemo(() => buildLogs(id), [id]);
 
   return (
     <div
       className={cn(
-        'w-96 rounded-xl overflow-hidden border bg-zinc-950/98 backdrop-blur-md',
+        'w-[420px] rounded-xl overflow-hidden border bg-zinc-950/98 backdrop-blur-md',
         BORDER[status]
       )}
     >
@@ -119,15 +142,21 @@ export function AgentNode({ id, data }: NodeProps<AgentNodeType>) {
 
       {/* ── Terminal body ───────────────────────────────────────────────────── */}
       <div className="p-3 h-80 overflow-hidden font-mono text-[11px] leading-relaxed flex flex-col">
-        {/* Static log lines */}
-        <div className="flex-1 overflow-hidden space-y-0">
-          {staticLogs.map((line, i) => (
+        {/* Static log lines — distinct per agent */}
+        <div className="flex-1 overflow-hidden">
+          {logs.map((line, i) => (
             <div
               key={i}
               className={cn(
-                line.startsWith('$') ? 'text-zinc-400' :
-                line.startsWith('─') ? 'text-zinc-800 tracking-widest' :
-                'text-zinc-600'
+                line.startsWith('$') || line.startsWith('✓')
+                  ? 'text-zinc-400'
+                  : line.startsWith('─')
+                  ? 'text-zinc-800'
+                  : line.startsWith('--') || line.startsWith('local') || line.startsWith('if') || line.startsWith('  redis') || line.startsWith('  return') || line.startsWith('else')
+                  ? 'text-violet-300/80'
+                  : line.startsWith('{') || line.startsWith('}') || line.includes('"')
+                  ? 'text-amber-300/70'
+                  : 'text-zinc-500'
               )}
             >
               {line}
@@ -135,7 +164,7 @@ export function AgentNode({ id, data }: NodeProps<AgentNodeType>) {
           ))}
         </div>
 
-        {/* Dynamic current-status line — animates when detail changes */}
+        {/* Dynamic status line at the bottom */}
         <div className="pt-1 border-t border-white/5 mt-1">
           <AnimatePresence mode="wait">
             <motion.div

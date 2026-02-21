@@ -18,7 +18,7 @@ const SENDER_LABEL: Record<Sender, string> = {
   bob:         'Bob',
   charlie:     'Charlie',
   system:      'System',
-  redis_agent: 'Distributed Lock Engine',
+  redis_agent: 'Distributed Lock Agent',
 };
 
 const PLACEHOLDER: Partial<Record<Phase, string>> = {
@@ -198,8 +198,8 @@ export function Boardroom({
           </button>
         </form>
 
-        {/* Persistent role hint */}
-        <p className="mt-2 text-[10px] font-mono text-zinc-700 px-1">
+        {/* Persistent role hint — matches message label font size */}
+        <p className="mt-2 text-[14px] font-mono text-zinc-700 px-1">
           {'>'} You are Charlie · CTO
         </p>
       </div>

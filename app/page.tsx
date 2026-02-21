@@ -33,8 +33,8 @@ export default function Home() {
 
       {/* ── Split-screen body ──────────────────────────────────────────────── */}
       <main className="flex flex-1 overflow-hidden">
-        {/* Left: Boardroom (Chat) */}
-        <div className="w-1/2 overflow-hidden">
+        {/* Left: Boardroom (Chat) — 40% */}
+        <div className="w-[40%] overflow-hidden">
           <Boardroom
             messages={messages}
             isTyping={isTyping}
@@ -45,8 +45,8 @@ export default function Home() {
           />
         </div>
 
-        {/* Right: Factory Floor (React Flow) */}
-        <div className="w-1/2 overflow-hidden">
+        {/* Right: Factory Floor (React Flow) — 60% */}
+        <div className="w-[60%] overflow-hidden">
           <FactoryFloor nodes={nodes} phase={phase} />
         </div>
       </main>

@@ -15,12 +15,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AgentNode, type AgentNodeType } from './nodes/AgentNode';
 import type { FactoryNode, Phase } from '@/lib/types';
 
-// ─── Node positions — vertical pipeline layout for w-96/h-80 nodes ───────────
-// api → redis → queue reads top-to-bottom as an execution pipeline
+// ─── Node positions — branching tree: Node 1 top-center, 2+3 bottom L/R ──────
+// Node width is 420px. Centers: api@410, redis@150, queue@670 → api is centered.
 const NODE_POSITIONS: Record<string, { x: number; y: number }> = {
-  'api-agent':   { x: 60, y: 20  },
-  'redis-agent': { x: 60, y: 400 },
-  'queue-agent': { x: 60, y: 780 },
+  'api-agent':   { x: 200, y: 20  },
+  'redis-agent': { x: -60, y: 460 },
+  'queue-agent': { x: 460, y: 460 },
 };
 
 // ─── Register custom node type OUTSIDE the component to prevent re-creation ───
@@ -81,7 +81,7 @@ export function FactoryFloor({ nodes, phase }: FactoryFloorProps) {
       ? { type: MarkerType.ArrowClosed, color: 'rgba(99, 102, 241, 0.5)', width: 14, height: 14 }
       : undefined;
 
-    // Pipeline topology: Gateway → Lock Engine → DLQ
+    // Fanout topology: Gateway branches to Lock Agent AND DLQ Agent in parallel
     return [
       {
         id: 'e-api-redis',
@@ -92,8 +92,8 @@ export function FactoryFloor({ nodes, phase }: FactoryFloorProps) {
         markerEnd: marker,
       },
       {
-        id: 'e-redis-queue',
-        source: 'redis-agent',
+        id: 'e-api-queue',
+        source: 'api-agent',
         target: 'queue-agent',
         animated: isActive,
         style: edgeStyle,

@@ -14,8 +14,8 @@ const SENDER_META: Record<Sender, { label: string; role: string; labelColor: str
   fiona:       { label: 'Fiona',                   role: 'Product Marketing Lead',   labelColor: 'text-pink-400'   },
   greg:        { label: 'Greg',                    role: 'CFO',                      labelColor: 'text-emerald-400'},
   hannah:      { label: 'Hannah',                  role: 'Lead Data Engineer',       labelColor: 'text-cyan-400'   },
-  ian:         { label: 'Ian',                     role: 'Legal Counsel',            labelColor: 'text-yellow-400' },
-  julia:       { label: 'Julia',                   role: 'SRE Lead',                 labelColor: 'text-teal-400'   },
+  ian:         { label: 'Ian',                     role: 'SRE Lead',                 labelColor: 'text-yellow-400' },
+  julia:       { label: 'Julia',                   role: 'Legal Counsel',            labelColor: 'text-teal-400'   },
 };
 
 function fmtTime(ts: number): string {

@@ -12,7 +12,7 @@ import useSound from 'use-sound';
 import { MessageBubble } from './MessageBubble';
 import { cn } from '@/lib/utils';
 import { STAKEHOLDERS } from '@/lib/constants';
-import type { ChatMessage, Phase, Sender, Stakeholder } from '@/lib/types';
+import type { ChatMessage, Phase, Sender, Stakeholder, StakeholderId } from '@/lib/types';
 
 const SENDER_LABEL: Record<Sender, string> = {
   alice:       'Alice',
@@ -151,6 +151,7 @@ interface BoardroomProps {
   handleUserMessage: (text: string) => Promise<void>;
   phase: Phase;
   selectStakeholder: (s: Stakeholder) => void;
+  selectedStakeholderId: StakeholderId | null;
 }
 
 export function Boardroom({
@@ -161,6 +162,7 @@ export function Boardroom({
   handleUserMessage,
   phase,
   selectStakeholder,
+  selectedStakeholderId,
 }: BoardroomProps) {
   const [inputValue, setInputValue] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -229,6 +231,33 @@ export function Boardroom({
               {initial}
             </div>
           ))}
+
+          {/* Stakeholder avatar — animates in when one is selected */}
+          <AnimatePresence>
+            {selectedStakeholderId && (() => {
+              const s = STAKEHOLDERS.find(x => x.id === selectedStakeholderId);
+              if (!s) return null;
+              return (
+                <motion.div
+                  key={s.id}
+                  initial={{ opacity: 0, scale: 0.5, x: -6 }}
+                  animate={{ opacity: 1, scale: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.5 }}
+                  transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                  title={`${s.name} · ${s.role}`}
+                  className={cn(
+                    'w-7 h-7 rounded-full flex items-center justify-center',
+                    'bg-gradient-to-br from-zinc-700 to-zinc-900',
+                    'ring-1 shadow-lg',
+                    s.ring,
+                    'text-[10px] font-semibold text-zinc-300 uppercase select-none'
+                  )}
+                >
+                  {s.name[0]}
+                </motion.div>
+              );
+            })()}
+          </AnimatePresence>
         </div>
       </div>
 

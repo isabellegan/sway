@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sway
+### Agentic Orchestration
+*Human consensus. Machine execution.*  
 
-## Getting Started
 
-First, run the development server:
+## Problem
+Autonomous AI agents lack the architectural context and safety guardrails to modify production infrastructure directly. Letting AI swarms write and deploy code in a vacuum creates unacceptable enterprise risk.  
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Solution
+**Sway** is a governed orchestration platform. It provides a collaborative command center that translates human boardroom consensus into pre-verified agent workflows, ensuring complex deployments are fully audited before hitting production.  
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Key Features
+* **The Boardroom (Human Consensus):** A real-time, multi-stakeholder interface where Engineering, Product, Security, and Legal align on architectural decisions before any code is written.
+* **The Factory Floor (Machine Execution):** A visual, node-based Swarm Control Plane built with React Flow. Watch autonomous agents (Gateway, Lock, and DLQ) architect solutions concurrently.
+* **Simulation-First Deployments:** Agents draft infrastructure changes in an isolated `ENV: SIMULATION` state. Code is never pushed to production without human review.
+* **Human-in-the-Loop Refactoring:** A built-in PR Approval workflow. Reject AI-generated architecture, provide natural language feedback (e.g., *"Extract hardcoded TTLs to environment variables"*), and watch the swarm iteratively refactor.
+* **Live Telemetry:** Real-time visualization of post-deployment infrastructure metrics to verify the agent's impact on production.  
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Scenario: Solving High-Concurrency Race Conditions
+For this MVP, Sway demonstrates solving a catastrophic Sev-1 e-commerce incident: a database race condition causing inventory overselling. 
 
-## Learn More
+Through human-agent collaboration, Sway architects and deploys a distributed systems fix:
+1. **The Distributed Lock:** Implementing a Redis `SETNX` strategy to ensure atomicity across horizontally scaled pods.
+2. **The Watchdog Heartbeat:** Preventing deadlocks with a background thread that dynamically extends the lock TTL while the server is actively processing.
+3. **Redlock Quorum & Fencing Tokens:** Eliminating single points of failure by achieving consensus across 5 independent Redis nodes, and utilizing strictly increasing Fencing Tokens to mathematically guarantee database safety even during severe CPU/Garbage Collection pauses.  
 
-To learn more about Next.js, take a look at the following resources:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Tech Stack
+* **Framework:** Next.js (App Router), React, TypeScript
+* **Styling:** Tailwind CSS, Framer Motion (Animations)
+* **Agentic Graph:** `@xyflow/react` (React Flow)
+* **Telemetry Visualization:** Recharts
+* **AI Integration:** `@ai-sdk/anthropic` (Opus 4.6 logic simulation)
+* **UI/UX:** `use-sound` (haptics), custom SVG generation, glassmorphic overlays  
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+## Running Locally
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Clone the repository:
+   ```bash
+   git clone [https://github.com/isabellegan/sway.git](https://github.com/isabellegan/sway.git)
+   cd sway
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+2. Install dependencies:
+   ```bash
+   npm install
+   
+3. Start the development server:
+   ```bash
+   npm run dev
+   
+4. Open http://localhost:3000 in your browser to enter the Boardroom.

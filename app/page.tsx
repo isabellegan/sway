@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { Header } from '@/components/Header';
 import { Boardroom } from '@/components/Boardroom';
 import { FactoryFloor } from '@/components/FactoryFloor';
+import { PRModal } from '@/components/PRModal';
 import { useOrchestration } from '@/hooks/useOrchestration';
 
 export default function Home() {
@@ -16,8 +18,10 @@ export default function Home() {
     isTyping,
     typingAs,
     inputLocked,
+    showPRModal,
     startOrchestration,
     handleUserMessage,
+    approvePR,
   } = useOrchestration();
 
   // Kick off Phase 1 on mount (after a brief moment to let the UI settle)
@@ -50,6 +54,10 @@ export default function Home() {
           <FactoryFloor nodes={nodes} phase={phase} />
         </div>
       </main>
+      {/* ── PR Approval Modal ─────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {showPRModal && <PRModal onApprove={approvePR} />}
+      </AnimatePresence>
     </div>
   );
 }

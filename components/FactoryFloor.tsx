@@ -13,29 +13,34 @@ import {
 } from '@xyflow/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AgentNode, type AgentNodeType } from './nodes/AgentNode';
+import { TelemetryNode, type TelemetryNodeType } from './nodes/TelemetryNode';
 import type { FactoryNode, Phase } from '@/lib/types';
 
 // ─── Node positions — branching tree: Node 1 top-center, 2+3 bottom L/R ──────
 // Node width is 420px. Centers: api@410, redis@150, queue@670 → api is centered.
+// TelemetryNode sits below the tree, centered under api-agent.
 const NODE_POSITIONS: Record<string, { x: number; y: number }> = {
-  'api-agent':   { x: 200, y: 20  },
-  'redis-agent': { x: -60, y: 460 },
-  'queue-agent': { x: 460, y: 460 },
+  'api-agent':      { x: 200, y: 20  },
+  'redis-agent':    { x: -60, y: 460 },
+  'queue-agent':    { x: 460, y: 460 },
+  'telemetry-node': { x: 200, y: 930 },
 };
 
-// ─── Register custom node type OUTSIDE the component to prevent re-creation ───
-const nodeTypes = { agentNode: AgentNode };
+// ─── Register custom node types OUTSIDE the component to prevent re-creation ──
+const nodeTypes = { agentNode: AgentNode, telemetryNode: TelemetryNode };
 
 // ─── Phases where edges should animate ───────────────────────────────────────
 const ACTIVE_PHASES: Phase[] = [
   'phase3_running',
   'waiting_resolution',
   'phase4_running',
+  'awaiting_pr',
+  'pr_approved',
   'complete',
 ];
 
-// ─── Auto-fit when nodes first appear ────────────────────────────────────────
-function AutoFitView({ nodeCount }: { nodeCount: number }) {
+// ─── Auto-fit when nodes first appear or telemetry activates ─────────────────
+function AutoFitView({ nodeCount, phase }: { nodeCount: number; phase: Phase }) {
   const { fitView } = useReactFlow();
 
   useEffect(() => {
@@ -44,6 +49,14 @@ function AutoFitView({ nodeCount }: { nodeCount: number }) {
       return () => clearTimeout(t);
     }
   }, [nodeCount, fitView]);
+
+  // Re-fit when telemetry node becomes active so it scrolls into view
+  useEffect(() => {
+    if (phase === 'pr_approved') {
+      const t = setTimeout(() => fitView({ padding: 0.1, duration: 700 }), 400);
+      return () => clearTimeout(t);
+    }
+  }, [phase, fitView]);
 
   return null;
 }
@@ -57,16 +70,30 @@ interface FactoryFloorProps {
 export function FactoryFloor({ nodes, phase }: FactoryFloorProps) {
   const isActive = ACTIVE_PHASES.includes(phase);
 
-  // Convert our FactoryNode[] to React Flow nodes
-  const rfNodes: AgentNodeType[] = useMemo(
-    () =>
-      nodes.map(n => ({
+  const isTelemetryActive = phase === 'pr_approved' || phase === 'complete';
+
+  // Convert our FactoryNode[] to React Flow nodes + add TelemetryNode when live
+  const rfNodes: (AgentNodeType | TelemetryNodeType)[] = useMemo(
+    () => {
+      const agentNodes: AgentNodeType[] = nodes.map(n => ({
         id: n.id,
         type: 'agentNode' as const,
         position: NODE_POSITIONS[n.id] ?? { x: 0, y: 0 },
         data: { label: n.label, status: n.status, detail: n.detail },
-      })),
-    [nodes]
+      }));
+
+      if (nodes.length === 0) return agentNodes;
+
+      const telemetryNode: TelemetryNodeType = {
+        id: 'telemetry-node',
+        type: 'telemetryNode' as const,
+        position: NODE_POSITIONS['telemetry-node'],
+        data: { isActive: isTelemetryActive },
+      };
+
+      return [...agentNodes, telemetryNode];
+    },
+    [nodes, isTelemetryActive]
   );
 
   // Create edges only when nodes are present
@@ -81,7 +108,17 @@ export function FactoryFloor({ nodes, phase }: FactoryFloorProps) {
       ? { type: MarkerType.ArrowClosed, color: 'rgba(99, 102, 241, 0.5)', width: 14, height: 14 }
       : undefined;
 
-    // Fanout topology: Gateway branches to Lock Agent AND DLQ Agent in parallel
+    // Telemetry edge — emerald, only animated after deploy
+    const telemetryEdgeStyle = {
+      stroke: isTelemetryActive ? 'rgba(16, 185, 129, 0.5)' : 'rgba(63, 63, 70, 0.3)',
+      strokeWidth: isTelemetryActive ? 2 : 1,
+    };
+    const telemetryMarker = isTelemetryActive
+      ? { type: MarkerType.ArrowClosed, color: 'rgba(16, 185, 129, 0.5)', width: 14, height: 14 }
+      : undefined;
+
+    // Fanout topology: Gateway branches to Lock Agent AND DLQ Agent in parallel.
+    // Telemetry sink collects from both agents below.
     return [
       {
         id: 'e-api-redis',
@@ -99,8 +136,24 @@ export function FactoryFloor({ nodes, phase }: FactoryFloorProps) {
         style: edgeStyle,
         markerEnd: marker,
       },
+      {
+        id: 'e-redis-telemetry',
+        source: 'redis-agent',
+        target: 'telemetry-node',
+        animated: isTelemetryActive,
+        style: telemetryEdgeStyle,
+        markerEnd: telemetryMarker,
+      },
+      {
+        id: 'e-queue-telemetry',
+        source: 'queue-agent',
+        target: 'telemetry-node',
+        animated: isTelemetryActive,
+        style: telemetryEdgeStyle,
+        markerEnd: telemetryMarker,
+      },
     ];
-  }, [nodes.length, isActive]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [nodes.length, isActive, isTelemetryActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <section className="relative flex flex-col h-full overflow-hidden">
@@ -151,7 +204,7 @@ export function FactoryFloor({ nodes, phase }: FactoryFloorProps) {
             size={1}
             color="rgba(255,255,255,0.05)"
           />
-          <AutoFitView nodeCount={nodes.length} />
+          <AutoFitView nodeCount={nodes.length} phase={phase} />
         </ReactFlow>
       </div>
 

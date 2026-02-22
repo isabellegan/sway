@@ -33,7 +33,7 @@ export const PHASE2_BOB_TTL =
 
 // ─── Phase 3 — Escalation ────────────────────────────────────────────────────
 export const PHASE3_REDIS_ALERT =
-  "CRITICAL: P99 DB write latency is spiking to 650ms. Current lock TTL is 500ms. Risk of 'Lock Leak': Server B will acquire the lock before Server A finishes writing. Collision imminent. Do we hard-increase TTL to 5000ms (high deadlock risk) or implement a watchdog heartbeat (complexity increase)?";
+  "CRITICAL: P99 DB write latency spiking to 650ms. Current lock TTL is 500ms. Risk of 'Lock Leak'. Furthermore, SETNX is a single point of failure — one Redis node down and the entire lock strategy collapses. Do we hard-increase TTL, or implement a Watchdog Heartbeat with a Redlock Quorum and Fencing Tokens?";
 
 export const PHASE3_BOB_RESPONSE =
   "Damn, the agent is right. If we bump the TTL to 5 seconds and a pod dies, inventory is frozen for 5 seconds. Watchdog is harder to build, but it's the only safe play.";
@@ -48,4 +48,10 @@ export const NODE_DETAILS = {
 } as const;
 
 // ─── Phase 4 — Resolution ────────────────────────────────────────────────────
-export const PHASE4_SYSTEM_MSG = '[SYSTEM]: Watchdog initialized. Lock safety verified.';
+// Emitted during Phase 4 while agents write code
+export const PHASE4_COMPILE_MSG =
+  '[SYSTEM]: Agents compiling. Pull request queued for review.';
+
+// Emitted after PR approval
+export const PHASE4_SYSTEM_MSG =
+  '[SYSTEM]: Redlock watchdog active. Fencing token verified. Quorum: 3/3. Deploy successful.';

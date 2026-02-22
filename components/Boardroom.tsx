@@ -24,7 +24,7 @@ const SENDER_LABEL: Record<Sender, string> = {
 const PLACEHOLDER: Partial<Record<Phase, string>> = {
   waiting_input1:     'Ask the team a question...',
   waiting_approval:   'Issue your directive...',
-  waiting_resolution: 'Choose your resolution...',
+  waiting_resolution: 'Implement the Watchdog with Redlock...',
 };
 
 // ─── Avatar data ──────────────────────────────────────────────────────────────

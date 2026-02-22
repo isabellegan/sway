@@ -7,8 +7,10 @@ export type Phase =
   | 'waiting_approval'   // Unlock: Charlie issues "Approved. Swarm, execute…"
   | 'api_loading'        // POST /api/synthesize in flight
   | 'phase3_running'     // Factory Floor awake; Redis escalation plays out
-  | 'waiting_resolution' // Unlock: Charlie chooses Watchdog
-  | 'phase4_running'     // Watchdog deploy sequence
+  | 'waiting_resolution' // Unlock: Charlie chooses Redlock Watchdog
+  | 'phase4_running'     // Agents write code for 3 seconds
+  | 'awaiting_pr'        // PR Modal displayed; waiting for Approve & Merge
+  | 'pr_approved'        // Telemetry node activates; deploy completes
   | 'complete';          // Header → Operational
 
 // ─── Participants ─────────────────────────────────────────────────────────────
@@ -58,6 +60,8 @@ export interface OrchestrationReturn {
   typingAs: Sender | null;
   inputLocked: boolean;
   epic: EpicJSON | null;
+  showPRModal: boolean;
   startOrchestration: () => void;
   handleUserMessage: (text: string) => Promise<void>;
+  approvePR: () => void;
 }

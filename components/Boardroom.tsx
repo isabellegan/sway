@@ -33,6 +33,7 @@ const PLACEHOLDER: Partial<Record<Phase, string>> = {
   waiting_input1:     'Ask the team a question...',
   waiting_approval:   'Issue your directive...',
   waiting_resolution: 'Implement the Watchdog with Redlock...',
+  waiting_refactor:   'Request a refactor (e.g. "refactor")...',
 };
 
 // ─── Avatar data ──────────────────────────────────────────────────────────────
@@ -96,20 +97,21 @@ function StakeholderDropdown({ onSelect }: { onSelect: (s: Stakeholder) => void 
                   i !== STAKEHOLDERS.length - 1 && 'border-b border-white/5'
                 )}
               >
-                {/* Colored initial chip */}
+                {/* Circular profile avatar with per-stakeholder colored ring */}
                 <div
                   className={cn(
-                    'w-6 h-6 rounded-md bg-zinc-800 border border-white/10 flex items-center justify-center',
-                    'text-[10px] font-bold flex-shrink-0',
-                    s.accent
+                    'w-7 h-7 rounded-full bg-zinc-900 ring-2 flex items-center justify-center',
+                    'text-[11px] font-bold text-white flex-shrink-0',
+                    s.ring
                   )}
                 >
                   {s.name[0]}
                 </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-xs font-mono font-medium text-zinc-200">{s.name}</span>
-                  <span className="text-[11px] font-mono text-zinc-500 truncate">{s.role}</span>
-                </div>
+                {/* Inline Name · Role — mirrors chat message label format */}
+                <span className="text-xs font-mono text-zinc-200">
+                  {s.name}
+                  <span className="text-zinc-500"> · {s.role}</span>
+                </span>
               </button>
             ))}
           </motion.div>
@@ -170,6 +172,16 @@ export function Boardroom({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
+
+  // Auto-scroll when stakeholder dropdown appears so the CTA is fully visible
+  useEffect(() => {
+    if (phase === 'waiting_stakeholder') {
+      const t = setTimeout(() => {
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 150);
+      return () => clearTimeout(t);
+    }
+  }, [phase]);
 
   useEffect(() => {
     if (messages.length > prevCountRef.current) {

@@ -34,7 +34,10 @@ const ACTIVE_PHASES: Phase[] = [
   'phase3_running',
   'waiting_resolution',
   'phase4_running',
-  'awaiting_pr',
+  'awaiting_pr_1',
+  'waiting_refactor',
+  'refactoring',
+  'awaiting_pr_2',
   'pr_approved',
   'complete',
 ];

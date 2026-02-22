@@ -19,9 +19,11 @@ export default function Home() {
     typingAs,
     inputLocked,
     showPRModal,
+    prVersion,
     startOrchestration,
     handleUserMessage,
     approvePR,
+    requestChanges,
     selectStakeholder,
   } = useOrchestration();
 
@@ -58,7 +60,13 @@ export default function Home() {
       </main>
       {/* ── PR Approval Modal ─────────────────────────────────────────────── */}
       <AnimatePresence>
-        {showPRModal && <PRModal onApprove={approvePR} />}
+        {showPRModal && (
+          <PRModal
+            onApprove={approvePR}
+            onRequestChanges={requestChanges}
+            prVersion={prVersion}
+          />
+        )}
       </AnimatePresence>
     </div>
   );

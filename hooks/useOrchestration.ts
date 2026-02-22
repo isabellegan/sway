@@ -23,10 +23,11 @@ import {
   PHASE3_BOB_RESPONSE,
   PHASE4_COMPILE_MSG,
   PHASE4_SYSTEM_MSG,
+  PHASE_REFACTOR_SYSTEM_MSG,
   NODE_DETAILS,
 } from '@/lib/constants';
 
-type InputGate = 'ttl' | 'approval' | 'resolution' | null;
+type InputGate = 'ttl' | 'approval' | 'resolution' | 'refactor' | null;
 
 let _seq = 0;
 const uid = () => `msg-${++_seq}-${Date.now()}`;
@@ -49,7 +50,7 @@ export function useOrchestration(): OrchestrationReturn {
   const [selectedStakeholderId, setSelectedStakeholderId] = useState<StakeholderId | null>(null);
 
   const timerIds = useRef<ReturnType<typeof setTimeout>[]>([]);
-  // Ref so the TTL callback chain always sees the selected stakeholder without stale closure
+  // Ref so TTL + refactor callback chains always see the stakeholder without stale closure
   const selectedStakeholderRef = useRef<Stakeholder | null>(null);
 
   const sched = useCallback((fn: () => void, delay: number) => {
@@ -79,7 +80,7 @@ export function useOrchestration(): OrchestrationReturn {
     [sched]
   );
 
-  // ─── approvePR ────────────────────────────────────────────────────────────
+  // ─── approvePR: works for both PR 1 and PR 2 ─────────────────────────────
   const approvePR = useCallback(() => {
     setPhase('pr_approved');
 
@@ -108,7 +109,48 @@ export function useOrchestration(): OrchestrationReturn {
     }, 1000 + TYPING_MS + 1200);
   }, [sched]);
 
-  // ─── Phase 4: Agents write code → PR Modal ────────────────────────────────
+  // ─── requestChanges: "Request Changes" clicked on PR 1 ───────────────────
+  const requestChanges = useCallback(() => {
+    setPhase('waiting_refactor');
+    setInputGate('refactor');
+    setInputLocked(false);
+  }, []);
+
+  // ─── runRefactoring: triggered when Charlie submits the refactor command ──
+  const runRefactoring = useCallback(() => {
+    setPhase('refactoring');
+    setInputLocked(true);
+
+    // T+300ms: All agents flip to refactoring state
+    sched(() => {
+      setNodes(prev =>
+        prev.map(n => ({
+          ...n,
+          status: 'working' as const,
+          detail:
+            n.id === 'api-agent'
+              ? NODE_DETAILS.api_refactoring
+              : n.id === 'redis-agent'
+              ? NODE_DETAILS.redis_refactoring
+              : NODE_DETAILS.queue_refactoring,
+        }))
+      );
+    }, 300);
+
+    // T+500ms: System types the refactor message
+    sched(() => { setIsTyping(true); setTypingAs('system'); }, 500);
+
+    sched(() => {
+      setIsTyping(false);
+      setTypingAs(null);
+      setMessages(prev => [...prev, buildMsg('system', PHASE_REFACTOR_SYSTEM_MSG, 'system_alert')]);
+    }, 500 + TYPING_MS);
+
+    // T+3800ms: PR 2 modal appears
+    sched(() => { setPhase('awaiting_pr_2'); }, 3800);
+  }, [sched]);
+
+  // ─── Phase 4: Agents write code → PR 1 Modal ──────────────────────────────
   const runPhase4 = useCallback(() => {
     setPhase('phase4_running');
     setInputLocked(true);
@@ -136,7 +178,8 @@ export function useOrchestration(): OrchestrationReturn {
       setMessages(prev => [...prev, buildMsg('system', PHASE4_COMPILE_MSG, 'system_alert')]);
     }, 500 + TYPING_MS);
 
-    sched(() => { setPhase('awaiting_pr'); }, 3800);
+    // PR 1 pops up
+    sched(() => { setPhase('awaiting_pr_1'); }, 3800);
   }, [sched]);
 
   // ─── Phase 3: Factory Floor + Escalation ──────────────────────────────────
@@ -185,13 +228,12 @@ export function useOrchestration(): OrchestrationReturn {
     [sched]
   );
 
-  // ─── selectStakeholder: user picks from dropdown after Bob's 4th message ──
+  // ─── selectStakeholder ────────────────────────────────────────────────────
   const selectStakeholder = useCallback(
     (stakeholder: Stakeholder) => {
       selectedStakeholderRef.current = stakeholder;
       setSelectedStakeholderId(stakeholder.id);
 
-      // Stakeholder drops their first message, then unlock for TTL question
       revealQueue(
         [{ sender: stakeholder.id, text: stakeholder.msg1 }],
         400,
@@ -209,7 +251,6 @@ export function useOrchestration(): OrchestrationReturn {
   const startOrchestration = useCallback(() => {
     setPhase('phase1_running');
     revealQueue(PHASE1_MESSAGES, 800, () => {
-      // Pause here — stakeholder dropdown appears; input stays locked
       setPhase('waiting_stakeholder');
     });
   }, [revealQueue]);
@@ -222,11 +263,10 @@ export function useOrchestration(): OrchestrationReturn {
       setMessages(prev => [...prev, buildMsg('charlie', text, 'chat')]);
       setInputLocked(true);
 
+      // Gate: TTL question → Bob responds → stakeholder msg2 → approval
       if (inputGate === 'ttl') {
         const stakeholder = selectedStakeholderRef.current;
         setInputGate(null);
-
-        // Bob responds to TTL question, THEN stakeholder drops their second message
         revealQueue(
           [{ sender: 'bob', text: PHASE2_BOB_TTL }],
           600,
@@ -251,6 +291,7 @@ export function useOrchestration(): OrchestrationReturn {
         return;
       }
 
+      // Gate: approval → API synthesize → Phase 3
       if (inputGate === 'approval') {
         setInputGate(null);
         setPhase('api_loading');
@@ -270,13 +311,21 @@ export function useOrchestration(): OrchestrationReturn {
         return;
       }
 
+      // Gate: resolution → Phase 4 (write code → PR 1)
       if (inputGate === 'resolution') {
         setInputGate(null);
         runPhase4();
         return;
       }
+
+      // Gate: refactor command → agents refactor → PR 2
+      if (inputGate === 'refactor') {
+        setInputGate(null);
+        runRefactoring();
+        return;
+      }
     },
-    [inputLocked, inputGate, messages, revealQueue, runPhase3, runPhase4]
+    [inputLocked, inputGate, messages, revealQueue, runPhase3, runPhase4, runRefactoring]
   );
 
   return {
@@ -289,11 +338,13 @@ export function useOrchestration(): OrchestrationReturn {
     typingAs,
     inputLocked,
     epic,
-    showPRModal: phase === 'awaiting_pr',
+    showPRModal: phase === 'awaiting_pr_1' || phase === 'awaiting_pr_2',
+    prVersion: phase === 'awaiting_pr_2' ? 2 : 1,
     selectedStakeholderId,
     startOrchestration,
     handleUserMessage,
     approvePR,
+    requestChanges,
     selectStakeholder,
   };
 }

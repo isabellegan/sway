@@ -10,7 +10,10 @@ export type Phase =
   | 'phase3_running'      // Factory Floor awake; Redis escalation plays out
   | 'waiting_resolution'  // Unlock: Charlie chooses Redlock Watchdog
   | 'phase4_running'      // Agents write code for 3 seconds
-  | 'awaiting_pr'         // PR Modal displayed; waiting for Approve & Merge
+  | 'awaiting_pr_1'       // PR #47 shown (hardcoded values); waiting for decision
+  | 'waiting_refactor'    // "Request Changes" clicked; input unlocked for Charlie
+  | 'refactoring'         // Agents extracting hardcoded values to env config
+  | 'awaiting_pr_2'       // PR #48 shown (env vars); waiting for decision
   | 'pr_approved'         // Telemetry node activates; deploy completes
   | 'complete';           // Header → Operational
 
@@ -23,7 +26,8 @@ export interface Stakeholder {
   role: string;
   msg1: string;
   msg2: string;
-  accent: string; // full Tailwind text-color class for avatar chip
+  accent: string; // full Tailwind text-color class  (e.g. 'text-orange-400')
+  ring: string;   // full Tailwind ring-color class   (e.g. 'ring-orange-400')
 }
 
 // ─── Participants ─────────────────────────────────────────────────────────────
@@ -74,9 +78,11 @@ export interface OrchestrationReturn {
   inputLocked: boolean;
   epic: EpicJSON | null;
   showPRModal: boolean;
+  prVersion: 1 | 2;
   selectedStakeholderId: StakeholderId | null;
   startOrchestration: () => void;
   handleUserMessage: (text: string) => Promise<void>;
   approvePR: () => void;
+  requestChanges: () => void;
   selectStakeholder: (s: Stakeholder) => void;
 }

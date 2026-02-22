@@ -198,8 +198,8 @@ export function Boardroom({
           </button>
         </form>
 
-        {/* Persistent role hint — matches message label font size */}
-        <p className="mt-2 text-[14px] font-mono text-zinc-700 px-1">
+        {/* Persistent role hint — matches message label font size exactly */}
+        <p className="mt-2 text-xs font-mono text-zinc-500 px-1">
           {'>'} You are Charlie · CTO
         </p>
       </div>

@@ -42,7 +42,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
-            <span className={cn('text-[14px] font-mono font-semibold', meta.labelColor)}>
+            <span className={cn('text-xs font-mono font-semibold', meta.labelColor)}>
               ⚠ {meta.label}
             </span>
           </div>
@@ -61,7 +61,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       <div className="flex flex-col items-end gap-1.5 px-4 my-2 ml-12">
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-mono text-zinc-600">{time}</span>
-          <span className={cn('text-[14px] font-mono', meta.labelColor)}>
+          <span className={cn('text-xs font-mono', meta.labelColor)}>
             {meta.label} · {meta.role}
           </span>
         </div>
@@ -82,7 +82,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     <div className="flex flex-col gap-1.5 px-4 my-2 mr-12">
       {/* Name · Role — unified color, no muted gray for role */}
       <div className="flex items-center gap-2">
-        <span className={cn('text-[14px] font-mono', meta.labelColor)}>
+        <span className={cn('text-xs font-mono', meta.labelColor)}>
           {meta.label}
           {meta.role && ` · ${meta.role}`}
         </span>

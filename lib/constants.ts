@@ -1,4 +1,4 @@
-import type { Sender } from './types';
+import type { Sender, Stakeholder } from './types';
 
 // ─── Timing ───────────────────────────────────────────────────────────────────
 export const TYPING_MS = 2200;   // Duration of "typing…" indicator before message appears
@@ -46,6 +46,66 @@ export const NODE_DETAILS = {
   redis_success: 'Watchdog heartbeat active.',
   queue_working: 'Provisioning dead-letter queue...',
 } as const;
+
+// ─── Stakeholders ─────────────────────────────────────────────────────────────
+export const STAKEHOLDERS: ReadonlyArray<Stakeholder> = [
+  {
+    id:     'diana',
+    name:   'Diana',
+    role:   'Head of Customer Success',
+    accent: 'text-orange-400',
+    msg1:   "Whatever you do, do it fast. My team is getting crushed by angry tweets and duplicate charge disputes.",
+    msg2:   "As long as it doesn't drop active carts or double-bill them, I'm good. Fix it.",
+  },
+  {
+    id:     'evan',
+    name:   'Evan',
+    role:   'CISO',
+    accent: 'text-slate-400',
+    msg1:   "Redis is fine, just ensure the connection string is pulled dynamically from AWS Secrets Manager and not hardcoded.",
+    msg2:   "500ms is tight, but acceptable for our risk profile. Ensure the DLQ data is encrypted at rest.",
+  },
+  {
+    id:     'fiona',
+    name:   'Fiona',
+    role:   'Product Marketing Lead',
+    accent: 'text-pink-400',
+    msg1:   "If this isn't stabilized, I have to pause the $50k ad spend for Friday's launch. We cannot afford the brand hit of another oversell.",
+    msg2:   "Agreed. Fluid inventory is better than frozen inventory. We need to keep the checkout funnel moving.",
+  },
+  {
+    id:     'greg',
+    name:   'Greg',
+    role:   'CFO',
+    accent: 'text-emerald-400',
+    msg1:   "We are currently bleeding revenue. Every blocked checkout is a lost sale. What is the infrastructure cost of scaling Redis globally?",
+    msg2:   "A 500ms deadlock risk is cheaper than the alternative. Proceed, but monitor the Redis compute costs.",
+  },
+  {
+    id:     'hannah',
+    name:   'Hannah',
+    role:   'Lead Data Engineer',
+    accent: 'text-cyan-400',
+    msg1:   "If you implement a DLQ, make sure the schema matches our Snowflake ingest pipeline so we can reconcile the failed orders tomorrow.",
+    msg2:   "Make sure the DLQ payload includes the raw timestamp and the exact lock state at failure so we can debug the telemetry later.",
+  },
+  {
+    id:     'ian',
+    name:   'Ian',
+    role:   'Legal Counsel',
+    accent: 'text-yellow-400',
+    msg1:   "Overselling inventory violates the Terms of Service for our flash sales. We need an audit trail of exactly which requests hit the race condition.",
+    msg2:   "As long as the DLQ captures the rejected PII securely, we satisfy compliance. Keep the audit logs intact.",
+  },
+  {
+    id:     'julia',
+    name:   'Julia',
+    role:   'SRE Lead',
+    accent: 'text-teal-400',
+    msg1:   "I'm monitoring the pods now. CPU utilization is fine, this is purely an isolation level bottleneck. Redis is the right call.",
+    msg2:   "If we go 500ms, I'm setting up PagerDuty alerts for any lock acquisition failures exceeding 400ms. We need a buffer before expiry.",
+  },
+];
 
 // ─── Phase 4 — Resolution ────────────────────────────────────────────────────
 // Emitted during Phase 4 while agents write code

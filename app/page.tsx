@@ -22,6 +22,7 @@ export default function Home() {
     startOrchestration,
     handleUserMessage,
     approvePR,
+    selectStakeholder,
   } = useOrchestration();
 
   // Kick off Phase 1 on mount (after a brief moment to let the UI settle)
@@ -46,6 +47,7 @@ export default function Home() {
             inputLocked={inputLocked}
             handleUserMessage={handleUserMessage}
             phase={phase}
+            selectStakeholder={selectStakeholder}
           />
         </div>
 

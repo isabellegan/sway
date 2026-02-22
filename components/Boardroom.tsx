@@ -11,7 +11,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import useSound from 'use-sound';
 import { MessageBubble } from './MessageBubble';
 import { cn } from '@/lib/utils';
-import type { ChatMessage, Phase, Sender } from '@/lib/types';
+import { STAKEHOLDERS } from '@/lib/constants';
+import type { ChatMessage, Phase, Sender, Stakeholder } from '@/lib/types';
 
 const SENDER_LABEL: Record<Sender, string> = {
   alice:       'Alice',
@@ -19,6 +20,13 @@ const SENDER_LABEL: Record<Sender, string> = {
   charlie:     'Charlie',
   system:      'System',
   redis_agent: 'Distributed Lock Agent',
+  diana:       'Diana',
+  evan:        'Evan',
+  fiona:       'Fiona',
+  greg:        'Greg',
+  hannah:      'Hannah',
+  ian:         'Ian',
+  julia:       'Julia',
 };
 
 const PLACEHOLDER: Partial<Record<Phase, string>> = {
@@ -34,15 +42,84 @@ const AVATARS = [
   { id: 'charlie', initial: 'C', ring: 'ring-indigo-500/40' },
 ];
 
-interface BoardroomProps {
-  messages: ChatMessage[];
-  isTyping: boolean;
-  typingAs: Sender | null;
-  inputLocked: boolean;
-  handleUserMessage: (text: string) => Promise<void>;
-  phase: Phase;
+// ─── Stakeholder dropdown ─────────────────────────────────────────────────────
+function StakeholderDropdown({ onSelect }: { onSelect: (s: Stakeholder) => void }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative flex-shrink-0 px-4 py-2.5 border-t border-white/10 bg-zinc-950/40">
+      {/* Trigger button */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className={cn(
+          'flex items-center gap-2 w-full text-xs font-mono transition-colors duration-150',
+          open ? 'text-zinc-200' : 'text-zinc-500 hover:text-zinc-300'
+        )}
+      >
+        <span
+          className={cn(
+            'w-4 h-4 rounded-md border flex items-center justify-center text-[10px] flex-shrink-0 transition-all duration-200',
+            open
+              ? 'border-indigo-500/50 text-indigo-400 bg-indigo-500/10'
+              : 'border-white/20 text-zinc-500'
+          )}
+        >
+          +
+        </span>
+        <span>Add Stakeholder</span>
+        <motion.span
+          className="ml-auto text-zinc-600 text-[10px]"
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ duration: 0.18 }}
+        >
+          ▲
+        </motion.span>
+      </button>
+
+      {/* Dropdown panel — slides up from button */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            key="stakeholder-panel"
+            initial={{ opacity: 0, y: 6, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.98 }}
+            transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute bottom-full left-4 right-4 mb-1.5 bg-zinc-900/98 border border-white/10 rounded-xl overflow-hidden shadow-2xl backdrop-blur-md z-20"
+          >
+            {STAKEHOLDERS.map((s, i) => (
+              <button
+                key={s.id}
+                onClick={() => { setOpen(false); onSelect(s); }}
+                className={cn(
+                  'w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/5 transition-colors duration-100',
+                  i !== STAKEHOLDERS.length - 1 && 'border-b border-white/5'
+                )}
+              >
+                {/* Colored initial chip */}
+                <div
+                  className={cn(
+                    'w-6 h-6 rounded-md bg-zinc-800 border border-white/10 flex items-center justify-center',
+                    'text-[10px] font-bold flex-shrink-0',
+                    s.accent
+                  )}
+                >
+                  {s.name[0]}
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-xs font-mono font-medium text-zinc-200">{s.name}</span>
+                  <span className="text-[11px] font-mono text-zinc-500 truncate">{s.role}</span>
+                </div>
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
+// ─── Typing indicator ─────────────────────────────────────────────────────────
 function TypingIndicator({ sender }: { sender: Sender }) {
   return (
     <div className="flex items-center gap-2 px-4 py-2">
@@ -63,6 +140,17 @@ function TypingIndicator({ sender }: { sender: Sender }) {
   );
 }
 
+// ─── Props ────────────────────────────────────────────────────────────────────
+interface BoardroomProps {
+  messages: ChatMessage[];
+  isTyping: boolean;
+  typingAs: Sender | null;
+  inputLocked: boolean;
+  handleUserMessage: (text: string) => Promise<void>;
+  phase: Phase;
+  selectStakeholder: (s: Stakeholder) => void;
+}
+
 export function Boardroom({
   messages,
   isTyping,
@@ -70,6 +158,7 @@ export function Boardroom({
   inputLocked,
   handleUserMessage,
   phase,
+  selectStakeholder,
 }: BoardroomProps) {
   const [inputValue, setInputValue] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -97,7 +186,6 @@ export function Boardroom({
     e.preventDefault();
     const text = inputValue.trim();
     if (!text) return;
-    // Hook's handleUserMessage internally ignores messages when gate is closed
     setInputValue('');
     await handleUserMessage(text);
   };
@@ -164,6 +252,21 @@ export function Boardroom({
         <div ref={bottomRef} />
       </div>
 
+      {/* ── Stakeholder dropdown — appears after Bob's 4th message ───────────── */}
+      <AnimatePresence>
+        {phase === 'waiting_stakeholder' && (
+          <motion.div
+            key="stakeholder-cta"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <StakeholderDropdown onSelect={selectStakeholder} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Input area ───────────────────────────────────────────────────────── */}
       <div className="flex-shrink-0 p-4 border-t border-white/10">
         <form onSubmit={handleSubmit} className="relative">
@@ -198,7 +301,7 @@ export function Boardroom({
           </button>
         </form>
 
-        {/* Persistent role hint — matches message label font size exactly */}
+        {/* Persistent role hint */}
         <p className="mt-2 text-xs font-mono text-zinc-500 px-1">
           {'>'} You are Charlie · CTO
         </p>

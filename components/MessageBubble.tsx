@@ -4,11 +4,18 @@ import type { ChatMessage, Sender } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const SENDER_META: Record<Sender, { label: string; role: string; labelColor: string }> = {
-  alice:       { label: 'Alice',               role: 'PM',        labelColor: 'text-violet-400' },
-  bob:         { label: 'Bob',                 role: 'Staff Eng', labelColor: 'text-blue-400'   },
-  charlie:     { label: 'Charlie',             role: 'CTO',       labelColor: 'text-indigo-300' },
-  system:      { label: 'System',              role: '',          labelColor: 'text-amber-400'  },
-  redis_agent: { label: 'Distributed Lock Agent', role: 'AI',    labelColor: 'text-red-400'    },
+  alice:       { label: 'Alice',                   role: 'PM',                       labelColor: 'text-violet-400' },
+  bob:         { label: 'Bob',                     role: 'Staff Eng',                labelColor: 'text-blue-400'   },
+  charlie:     { label: 'Charlie',                 role: 'CTO',                      labelColor: 'text-indigo-300' },
+  system:      { label: 'System',                  role: '',                         labelColor: 'text-amber-400'  },
+  redis_agent: { label: 'Distributed Lock Agent',  role: 'AI',                       labelColor: 'text-red-400'    },
+  diana:       { label: 'Diana',                   role: 'Head of Customer Success', labelColor: 'text-orange-400' },
+  evan:        { label: 'Evan',                    role: 'CISO',                     labelColor: 'text-slate-400'  },
+  fiona:       { label: 'Fiona',                   role: 'Product Marketing Lead',   labelColor: 'text-pink-400'   },
+  greg:        { label: 'Greg',                    role: 'CFO',                      labelColor: 'text-emerald-400'},
+  hannah:      { label: 'Hannah',                  role: 'Lead Data Engineer',       labelColor: 'text-cyan-400'   },
+  ian:         { label: 'Ian',                     role: 'Legal Counsel',            labelColor: 'text-yellow-400' },
+  julia:       { label: 'Julia',                   role: 'SRE Lead',                 labelColor: 'text-teal-400'   },
 };
 
 function fmtTime(ts: number): string {
@@ -72,10 +79,13 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     );
   }
 
-  // ─── Alice / Bob (left-aligned) ────────────────────────────────────────────
+  // ─── Alice / Bob / Stakeholders (left-aligned) ───────────────────────────
+  const isStakeholder = !['alice', 'bob', 'charlie', 'system', 'redis_agent'].includes(sender);
   const bubbleBg =
     sender === 'alice'
       ? 'bg-zinc-800/60 border-white/10'
+      : isStakeholder
+      ? 'bg-zinc-800/50 border-white/10'
       : 'bg-zinc-900/70 border-white/8';
 
   return (

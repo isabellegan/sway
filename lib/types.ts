@@ -1,20 +1,33 @@
 // ─── Phases ──────────────────────────────────────────────────────────────────
 export type Phase =
   | 'idle'
-  | 'phase1_running'     // Auto-playing boardroom dialogue
-  | 'waiting_input1'     // Unlock: Charlie asks about TTL
-  | 'phase2a_running'    // Bob responds to TTL question
-  | 'waiting_approval'   // Unlock: Charlie issues "Approved. Swarm, execute…"
-  | 'api_loading'        // POST /api/synthesize in flight
-  | 'phase3_running'     // Factory Floor awake; Redis escalation plays out
-  | 'waiting_resolution' // Unlock: Charlie chooses Redlock Watchdog
-  | 'phase4_running'     // Agents write code for 3 seconds
-  | 'awaiting_pr'        // PR Modal displayed; waiting for Approve & Merge
-  | 'pr_approved'        // Telemetry node activates; deploy completes
-  | 'complete';          // Header → Operational
+  | 'phase1_running'      // Auto-playing boardroom dialogue
+  | 'waiting_stakeholder' // Stakeholder dropdown shown; input stays locked
+  | 'waiting_input1'      // Unlock: Charlie asks about TTL
+  | 'phase2a_running'     // Bob responds to TTL question
+  | 'waiting_approval'    // Unlock: Charlie issues "Approved. Swarm, execute…"
+  | 'api_loading'         // POST /api/synthesize in flight
+  | 'phase3_running'      // Factory Floor awake; Redis escalation plays out
+  | 'waiting_resolution'  // Unlock: Charlie chooses Redlock Watchdog
+  | 'phase4_running'      // Agents write code for 3 seconds
+  | 'awaiting_pr'         // PR Modal displayed; waiting for Approve & Merge
+  | 'pr_approved'         // Telemetry node activates; deploy completes
+  | 'complete';           // Header → Operational
+
+// ─── Stakeholders ─────────────────────────────────────────────────────────────
+export type StakeholderId = 'diana' | 'evan' | 'fiona' | 'greg' | 'hannah' | 'ian' | 'julia';
+
+export interface Stakeholder {
+  id: StakeholderId;
+  name: string;
+  role: string;
+  msg1: string;
+  msg2: string;
+  accent: string; // full Tailwind text-color class for avatar chip
+}
 
 // ─── Participants ─────────────────────────────────────────────────────────────
-export type Sender = 'alice' | 'bob' | 'charlie' | 'system' | 'redis_agent';
+export type Sender = 'alice' | 'bob' | 'charlie' | 'system' | 'redis_agent' | StakeholderId;
 
 // ─── Chat ─────────────────────────────────────────────────────────────────────
 export type MessageType = 'chat' | 'system_alert' | 'agent_alert';
@@ -61,7 +74,9 @@ export interface OrchestrationReturn {
   inputLocked: boolean;
   epic: EpicJSON | null;
   showPRModal: boolean;
+  selectedStakeholderId: StakeholderId | null;
   startOrchestration: () => void;
   handleUserMessage: (text: string) => Promise<void>;
   approvePR: () => void;
+  selectStakeholder: (s: Stakeholder) => void;
 }

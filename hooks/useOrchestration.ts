@@ -10,6 +10,8 @@ import type {
   EpicJSON,
   MessageType,
   OrchestrationReturn,
+  Stakeholder,
+  StakeholderId,
 } from '@/lib/types';
 import {
   TYPING_MS,
@@ -44,8 +46,11 @@ export function useOrchestration(): OrchestrationReturn {
   const [inputLocked, setInputLocked] = useState(true);
   const [inputGate, setInputGate] = useState<InputGate>(null);
   const [epic, setEpic] = useState<EpicJSON | null>(null);
+  const [selectedStakeholderId, setSelectedStakeholderId] = useState<StakeholderId | null>(null);
 
   const timerIds = useRef<ReturnType<typeof setTimeout>[]>([]);
+  // Ref so the TTL callback chain always sees the selected stakeholder without stale closure
+  const selectedStakeholderRef = useRef<Stakeholder | null>(null);
 
   const sched = useCallback((fn: () => void, delay: number) => {
     const id = setTimeout(fn, delay);
@@ -74,11 +79,10 @@ export function useOrchestration(): OrchestrationReturn {
     [sched]
   );
 
-  // ─── approvePR: called when user clicks "Approve & Merge" in the PR modal ───
+  // ─── approvePR ────────────────────────────────────────────────────────────
   const approvePR = useCallback(() => {
     setPhase('pr_approved');
 
-    // T+600ms: Distributed Lock Agent → success (emerald glow)
     sched(() => {
       setNodes(prev =>
         prev.map(n =>
@@ -89,7 +93,6 @@ export function useOrchestration(): OrchestrationReturn {
       );
     }, 600);
 
-    // T+1000ms: System types the completion message
     sched(() => { setIsTyping(true); setTypingAs('system'); }, 1000);
 
     sched(() => {
@@ -98,7 +101,6 @@ export function useOrchestration(): OrchestrationReturn {
       setMessages(prev => [...prev, buildMsg('system', PHASE4_SYSTEM_MSG, 'system_alert')]);
     }, 1000 + TYPING_MS);
 
-    // T+~4400ms: Header flips to Operational
     sched(() => {
       setSystemStatus('operational');
       setDeployHash(DEPLOY_HASH);
@@ -111,7 +113,6 @@ export function useOrchestration(): OrchestrationReturn {
     setPhase('phase4_running');
     setInputLocked(true);
 
-    // T+300ms: All three agents update to code-writing state
     sched(() => {
       setNodes(prev =>
         prev.map(n => ({
@@ -127,20 +128,15 @@ export function useOrchestration(): OrchestrationReturn {
       );
     }, 300);
 
-    // T+500ms: System typing indicator visible in boardroom
     sched(() => { setIsTyping(true); setTypingAs('system'); }, 500);
 
-    // T+2700ms: System message — PR is ready
     sched(() => {
       setIsTyping(false);
       setTypingAs(null);
       setMessages(prev => [...prev, buildMsg('system', PHASE4_COMPILE_MSG, 'system_alert')]);
     }, 500 + TYPING_MS);
 
-    // T+3800ms: Phase → awaiting_pr (PR Modal appears)
-    sched(() => {
-      setPhase('awaiting_pr');
-    }, 3800);
+    sched(() => { setPhase('awaiting_pr'); }, 3800);
   }, [sched]);
 
   // ─── Phase 3: Factory Floor + Escalation ──────────────────────────────────
@@ -155,7 +151,6 @@ export function useOrchestration(): OrchestrationReturn {
         { id: 'queue-agent', label: 'DLQ Agent',                 status: 'working', detail: NODE_DETAILS.queue_working },
       ]);
 
-      // T+2000ms: Lock Agent detects the leak → flip to error
       sched(() => {
         setNodes(prev =>
           prev.map(n =>
@@ -166,7 +161,6 @@ export function useOrchestration(): OrchestrationReturn {
         );
       }, 2000);
 
-      // T+2500ms: Lock Agent pushes CRITICAL alert
       sched(() => { setIsTyping(true); setTypingAs('redis_agent'); }, 2500);
       sched(() => {
         setIsTyping(false);
@@ -174,7 +168,6 @@ export function useOrchestration(): OrchestrationReturn {
         setMessages(prev => [...prev, buildMsg('redis_agent', PHASE3_REDIS_ALERT, 'agent_alert')]);
       }, 2500 + TYPING_MS);
 
-      // T+2s after alert: Bob weighs in
       const bobAt = 2500 + TYPING_MS + 2000;
       sched(() => { setIsTyping(true); setTypingAs('bob'); }, bobAt);
       sched(() => {
@@ -192,13 +185,32 @@ export function useOrchestration(): OrchestrationReturn {
     [sched]
   );
 
+  // ─── selectStakeholder: user picks from dropdown after Bob's 4th message ──
+  const selectStakeholder = useCallback(
+    (stakeholder: Stakeholder) => {
+      selectedStakeholderRef.current = stakeholder;
+      setSelectedStakeholderId(stakeholder.id);
+
+      // Stakeholder drops their first message, then unlock for TTL question
+      revealQueue(
+        [{ sender: stakeholder.id, text: stakeholder.msg1 }],
+        400,
+        () => {
+          setPhase('waiting_input1');
+          setInputGate('ttl');
+          setInputLocked(false);
+        }
+      );
+    },
+    [revealQueue]
+  );
+
   // ─── Phase 1: Auto-load boardroom dialogue ────────────────────────────────
   const startOrchestration = useCallback(() => {
     setPhase('phase1_running');
     revealQueue(PHASE1_MESSAGES, 800, () => {
-      setPhase('waiting_input1');
-      setInputGate('ttl');
-      setInputLocked(false);
+      // Pause here — stakeholder dropdown appears; input stays locked
+      setPhase('waiting_stakeholder');
     });
   }, [revealQueue]);
 
@@ -211,14 +223,29 @@ export function useOrchestration(): OrchestrationReturn {
       setInputLocked(true);
 
       if (inputGate === 'ttl') {
+        const stakeholder = selectedStakeholderRef.current;
         setInputGate(null);
+
+        // Bob responds to TTL question, THEN stakeholder drops their second message
         revealQueue(
           [{ sender: 'bob', text: PHASE2_BOB_TTL }],
           600,
           () => {
-            setPhase('waiting_approval');
-            setInputGate('approval');
-            setInputLocked(false);
+            if (stakeholder) {
+              revealQueue(
+                [{ sender: stakeholder.id, text: stakeholder.msg2 }],
+                400,
+                () => {
+                  setPhase('waiting_approval');
+                  setInputGate('approval');
+                  setInputLocked(false);
+                }
+              );
+            } else {
+              setPhase('waiting_approval');
+              setInputGate('approval');
+              setInputLocked(false);
+            }
           }
         );
         return;
@@ -263,8 +290,10 @@ export function useOrchestration(): OrchestrationReturn {
     inputLocked,
     epic,
     showPRModal: phase === 'awaiting_pr',
+    selectedStakeholderId,
     startOrchestration,
     handleUserMessage,
     approvePR,
+    selectStakeholder,
   };
 }

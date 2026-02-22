@@ -34,7 +34,7 @@ export default function Home() {
   return (
     <div className="flex flex-col h-full">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <Header systemStatus={systemStatus} deployHash={deployHash} />
+      <Header systemStatus={systemStatus} deployHash={deployHash} phase={phase} />
 
       {/* ── Split-screen body ──────────────────────────────────────────────── */}
       <main className="flex flex-1 overflow-hidden">

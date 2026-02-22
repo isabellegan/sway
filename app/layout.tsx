@@ -6,7 +6,7 @@ const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Sway | Distributed Orchestration',
+  title: 'Sway | Agentic Orchestration',
   description:
     'Sway is a real-time multi-agent orchestration platform for engineering war rooms. Coordinate distributed systems, resolve race conditions, and deploy infrastructure — all from a single split-screen command surface.',
 };

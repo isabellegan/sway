@@ -1,6 +1,7 @@
 'use client';
 
 import { type NodeProps, type Node, Handle, Position } from '@xyflow/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   LineChart,
   Line,
@@ -85,11 +86,38 @@ export function TelemetryNode({ data }: NodeProps<TelemetryNodeType>) {
               isActive ? 'bg-emerald-400' : 'bg-zinc-600'
             )}
           />
-          <span className="text-zinc-300 text-[11px] font-mono font-medium">
-            Live Telemetry
-          </span>
+          <div className="flex flex-col leading-tight">
+            <span className="text-zinc-300 text-[11px] font-mono font-medium">
+              Live Telemetry
+            </span>
+            <AnimatePresence mode="wait">
+              {isActive ? (
+                <motion.span
+                  key="live"
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 4 }}
+                  transition={{ duration: 0.25 }}
+                  className="text-[10px] font-mono text-emerald-400"
+                >
+                  Live Production Latency
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="sim"
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 4 }}
+                  transition={{ duration: 0.25 }}
+                  className="text-[10px] font-mono text-zinc-500"
+                >
+                  Predicted Latency Impact
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </div>
           {isActive && (
-            <span className="ml-auto text-[10px] font-mono text-emerald-400">
+            <span className="ml-auto text-[10px] font-mono text-emerald-400 self-start">
               p99: 12ms ↓
             </span>
           )}

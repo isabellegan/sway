@@ -82,7 +82,8 @@ export function FactoryFloor({ nodes, phase }: FactoryFloorProps) {
         data: { label: n.label, status: n.status, detail: n.detail },
       }));
 
-      if (nodes.length === 0) return agentNodes;
+      // Only inject TelemetryNode once pr_approved — dynamically added to the graph
+      if (nodes.length === 0 || !isTelemetryActive) return agentNodes;
 
       const telemetryNode: TelemetryNodeType = {
         id: 'telemetry-node',
@@ -118,7 +119,7 @@ export function FactoryFloor({ nodes, phase }: FactoryFloorProps) {
       : undefined;
 
     // Fanout topology: Gateway branches to Lock Agent AND DLQ Agent in parallel.
-    // Telemetry sink collects from both agents below.
+    // Telemetry sink edges only appear once the node is dynamically added.
     return [
       {
         id: 'e-api-redis',
@@ -136,22 +137,26 @@ export function FactoryFloor({ nodes, phase }: FactoryFloorProps) {
         style: edgeStyle,
         markerEnd: marker,
       },
-      {
-        id: 'e-redis-telemetry',
-        source: 'redis-agent',
-        target: 'telemetry-node',
-        animated: isTelemetryActive,
-        style: telemetryEdgeStyle,
-        markerEnd: telemetryMarker,
-      },
-      {
-        id: 'e-queue-telemetry',
-        source: 'queue-agent',
-        target: 'telemetry-node',
-        animated: isTelemetryActive,
-        style: telemetryEdgeStyle,
-        markerEnd: telemetryMarker,
-      },
+      ...(isTelemetryActive
+        ? [
+            {
+              id: 'e-redis-telemetry',
+              source: 'redis-agent',
+              target: 'telemetry-node',
+              animated: true,
+              style: telemetryEdgeStyle,
+              markerEnd: telemetryMarker,
+            },
+            {
+              id: 'e-queue-telemetry',
+              source: 'queue-agent',
+              target: 'telemetry-node',
+              animated: true,
+              style: telemetryEdgeStyle,
+              markerEnd: telemetryMarker,
+            },
+          ]
+        : []),
     ];
   }, [nodes.length, isActive, isTelemetryActive]); // eslint-disable-line react-hooks/exhaustive-deps
 

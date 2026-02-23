@@ -42,24 +42,20 @@ const ACTIVE_PHASES: Phase[] = [
   'complete',
 ];
 
-// ─── Auto-fit when nodes first appear or telemetry activates ─────────────────
-function AutoFitView({ nodeCount, phase }: { nodeCount: number; phase: Phase }) {
+// ─── Auto-fit when nodes first appear or the 4th node is injected ────────────
+function AutoFitView({ nodeCount }: { nodeCount: number }) {
   const { fitView } = useReactFlow();
 
   useEffect(() => {
-    if (nodeCount > 0) {
-      const t = setTimeout(() => fitView({ padding: 0.12, duration: 500 }), 80);
-      return () => clearTimeout(t);
-    }
+    if (nodeCount === 0) return;
+    // Give React Flow more time to measure the injected TelemetryNode (4th node)
+    // before calling fitView so the camera zooms to include it correctly.
+    const delay   = nodeCount === 4 ? 650  : 80;
+    const padding = nodeCount === 4 ? 0.2  : 0.12;
+    const duration = nodeCount === 4 ? 800  : 500;
+    const t = setTimeout(() => fitView({ padding, duration }), delay);
+    return () => clearTimeout(t);
   }, [nodeCount, fitView]);
-
-  // Re-fit when telemetry node becomes active so it scrolls into view
-  useEffect(() => {
-    if (phase === 'pr_approved') {
-      const t = setTimeout(() => fitView({ padding: 0.1, duration: 700 }), 400);
-      return () => clearTimeout(t);
-    }
-  }, [phase, fitView]);
 
   return null;
 }
@@ -212,7 +208,7 @@ export function FactoryFloor({ nodes, phase }: FactoryFloorProps) {
             size={1}
             color="rgba(255,255,255,0.05)"
           />
-          <AutoFitView nodeCount={nodes.length} phase={phase} />
+          <AutoFitView nodeCount={rfNodes.length} />
         </ReactFlow>
       </div>
 

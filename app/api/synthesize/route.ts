@@ -58,10 +58,9 @@ Return a concise, actionable Epic.`;
 
     return NextResponse.json({ epic: object });
   } catch (error) {
-    console.error('[/api/synthesize] generateObject failed:', error);
-    return NextResponse.json(
-      { error: 'AI synthesis failed', epic: null },
-      { status: 500 }
-    );
+    // generateObject failed (bad key, quota, network). Degrade gracefully —
+    // the client proceeds with epic: null, so this is not an error condition.
+    console.warn('[/api/synthesize] generateObject failed, degrading to epic: null', error);
+    return NextResponse.json({ epic: null });
   }
 }
